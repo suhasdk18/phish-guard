@@ -335,3 +335,199 @@ class TrainingManager:
         return {
             'score': score,
             'total': len(questions),
+            'percentage': percentage,
+            'passed': passed,
+            'results': results
+        }
+    
+    def get_user_stats(self, user_email: str) -> Dict:
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT AVG(CAST(score AS FLOAT) / total_questions * 100) as avg_score,
+                       COUNT(*) as total_attempts,
+                       MAX(CAST(score AS FLOAT) / total_questions * 100) as best_score
+                FROM quiz_results 
+                WHERE user_email = ?
+            ''', (user_email,))
+            
+            result = cursor.fetchone()
+            conn.close()
+            
+            return {
+                'average_score': round(result[0] or 0, 1),
+                'total_attempts': result[1] or 0,
+                'best_score': round(result[2] or 0, 1)
+            }
+            
+        except Exception as e:
+            print(f"Error getting user stats: {e}")
+            return {'average_score': 0, 'total_attempts': 0, 'best_score': 0}
+
+config = ConfigManager()
+db_manager = DatabaseManager(config)
+training_manager = TrainingManager(config)
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = config.get('web_dashboard.secret_key', 'dev-key-change-in-production')
+app.config['DEBUG'] = config.get('web_dashboard.debug', True)
+
+logging.basicConfig(level=logging.INFO)
+
+@app.route('/')
+def dashboard():
+    stats = db_manager.get_dashboard_stats()
+    recent_activity = db_manager.get_recent_activity(10)
+    
+    return render_template('dashboard.html', 
+                         stats=stats, 
+                         recent_activity=recent_activity,
+                         current_page='dashboard')
+
+@app.route('/quarantine')
+def quarantine_view():
+    status_filter = request.args.get('status')
+    emails = db_manager.get_quarantined_emails(limit=100, status=status_filter)
+    
+    return render_template('quarantine.html', 
+                         emails=emails, 
+                         current_filter=status_filter,
+                         current_page='quarantine')
+
+@app.route('/quarantine/<int:email_id>')
+def email_detail(email_id):
+    email = db_manager.get_email_by_id(email_id)
+    if not email:
+        flash('Email not found', 'error')
+        return redirect(url_for('quarantine_view'))
+    
+    return render_template('email_detail.html', 
+                         email=email,
+                         current_page='quarantine')
+
+@app.route('/api/quarantine/<int:email_id>/release', methods=['POST'])
+def release_email(email_id):
+    success = db_manager.release_email(email_id)
+    return jsonify({'success': success, 'message': 'Email released' if success else 'Failed to release email'})
+
+@app.route('/api/quarantine/<int:email_id>/delete', methods=['POST'])
+def delete_email(email_id):
+    success = db_manager.delete_email(email_id)
+    return jsonify({'success': success, 'message': 'Email deleted' if success else 'Failed to delete email'})
+
+@app.route('/training')
+def training_dashboard():
+    return render_template('training.html', current_page='training')
+
+@app.route('/training/quiz')
+def quiz():
+    questions = training_manager.get_quiz_questions()
+    return render_template('quiz.html', questions=questions, current_page='training')
+
+@app.route('/training/quiz/submit', methods=['POST'])
+def submit_quiz():
+    user_email = request.form.get('user_email')
+    if not user_email:
+        flash('Email address is required', 'error')
+        return redirect(url_for('quiz'))
+    
+    answers = []
+    questions = training_manager.get_quiz_questions()
+    
+    for i in range(len(questions)):
+        answer = request.form.get(f'question_{i}')
+        if answer is not None:
+            answers.append(int(answer))
+        else:
+            answers.append(-1)
+    
+    results = training_manager.submit_quiz(user_email, answers)
+    
+    return render_template('quiz_results.html', 
+                         results=results,
+                         user_email=user_email,
+                         current_page='training')
+
+@app.route('/api/training/user-stats/<user_email>')
+def get_user_stats(user_email):
+    stats = training_manager.get_user_stats(user_email)
+    return jsonify(stats)
+
+@app.route('/api/stats')
+def api_stats():
+    stats = db_manager.get_dashboard_stats()
+    return jsonify(stats)
+
+@app.route('/api/quarantine')
+def api_quarantine():
+    limit = request.args.get('limit', 50, type=int)
+    status = request.args.get('status')
+    emails = db_manager.get_quarantined_emails(limit=limit, status=status)
+    return jsonify({'emails': emails, 'count': len(emails)})
+
+@app.route('/reports')
+def reports():
+    stats = db_manager.get_dashboard_stats()
+    recent_emails = db_manager.get_quarantined_emails(limit=20)
+    
+    risk_distribution = {
+        'HIGH': sum(1 for e in recent_emails if e['risk_level'] == 'HIGH'),
+        'MEDIUM': sum(1 for e in recent_emails if e['risk_level'] == 'MEDIUM'),
+        'LOW': sum(1 for e in recent_emails if e['risk_level'] == 'LOW')
+    }
+    
+    return render_template('reports.html',
+                         stats=stats,
+                         risk_distribution=risk_distribution,
+                         current_page='reports')
+
+@app.route('/settings')
+def settings():
+    return render_template('settings.html', current_page='settings')
+
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return render_template('500.html'), 500
+
+@app.template_filter('datetime')
+def datetime_filter(s):
+    try:
+        dt = datetime.fromisoformat(s.replace('Z', '+00:00'))
+        return dt.strftime('%Y-%m-%d %H:%M:%S')
+    except:
+        return s
+
+@app.template_filter('risk_badge_class')
+def risk_badge_class(risk_level):
+    classes = {
+        'HIGH': 'badge bg-danger',
+        'MEDIUM': 'badge bg-warning text-dark', 
+        'LOW': 'badge bg-info',
+        'MINIMAL': 'badge bg-success'
+    }
+    return classes.get(risk_level, 'badge bg-secondary')
+
+@app.context_processor
+def inject_config():
+    return {
+        'system_name': config.get('system.name', 'Phishing Detection System'),
+        'version': config.get('system.version', '1.0.0'),
+        'author': config.get('system.author', 'suhasdk18')
+    }
+
+if __name__ == '__main__':
+    host = config.get('web_dashboard.host', '0.0.0.0')
+    port = config.get('web_dashboard.port', 5000)
+    debug = config.get('web_dashboard.debug', True)
+    
+    print(f"Starting Phishing Detection Web Dashboard...")
+    print(f"Dashboard URL: http://{host if host != '0.0.0.0' else 'localhost'}:{port}")
+    print(f"Debug mode: {debug}")
+    
+    app.run(host=host, port=port, debug=debug)
