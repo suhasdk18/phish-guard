@@ -1,0 +1,36 @@
+FROM python:3.9-slim
+
+LABEL maintainer="suhasdk18 <suhasdk18@gmail.com>"
+LABEL description="Phishing Detection System - AI-powered email security"
+LABEL version="1.0.0"
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    sqlite3 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+RUN mkdir -p data/models data/quarantine data/logs logs templates static && \
+    chmod +x main.py app.py
+
+ENV PYTHONPATH=/app
+ENV FLASK_APP=app.py
+ENV FLASK_ENV=production
+
+EXPOSE 5000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:5000/api/stats || exit 1
+
+VOLUME ["/app/data", "/app/logs", "/app/config"]
+
+CMD ["python", "main.py", "--mode", "monitor"]

@@ -1,0 +1,185 @@
+system:
+  name: "Phishing Detection System"
+  version: "1.0.0"
+  author: "suhasdk18"
+  email: "suhasdk18@gmail.com"
+  debug: true
+  log_level: "INFO"
+
+email:
+  mode: "mailhog"
+  mailhog:
+    host: "localhost"
+    port: 8025
+    api_port: 8025
+  postfix:
+    host: "localhost" 
+    port: 25
+    mail_dir: "/var/spool/mail"
+  processing:
+    batch_size: 50
+    interval_seconds: 30
+    max_retries: 3
+
+detection:
+  ml_classifier:
+    enabled: true
+    model_path: "data/models/phishing_model.pkl"
+    threshold: 0.7
+    retrain_interval_hours: 24
+    weight: 0.6
+  
+  rule_engine:
+    enabled: true
+    threshold: 50
+    weight: 0.4
+    keywords_file: "config/phishing_keywords.txt"
+    domains_file: "config/suspicious_domains.txt"
+  
+  attachment_analyzer:
+    enabled: true
+    max_file_size_mb: 50
+    ocr_enabled: true
+    dangerous_extensions:
+      - ".exe"
+      - ".scr" 
+      - ".bat"
+      - ".cmd"
+      - ".com"
+      - ".pif"
+      - ".vbs"
+      - ".js"
+    
+  combined:
+    threshold: 0.6
+    require_multiple_indicators: false
+
+quarantine:
+  database_path: "data/quarantine.db"
+  retention_days: 90
+  auto_cleanup: true
+  backup_enabled: true
+  backup_path: "data/backups"
+
+incident_response:
+  database_path: "data/incident_response.db"
+  auto_blacklist: true
+  blacklist_threshold: 3
+  notification_enabled: true
+  
+  smtp:
+    host: "localhost"
+    port: 1025
+    use_tls: false
+    username: ""
+    password: ""
+    from_address: "security@company.local"
+  
+  notifications:
+    soc_email: "soc@company.local"
+    admin_email: "admin@company.local"
+    user_notifications: true
+    escalation_threshold: 80
+
+training:
+  database_path: "data/training.db"
+  quiz:
+    questions_per_session: 5
+    passing_score: 70
+    max_attempts: 3
+    cooldown_hours: 24
+  
+  gamification:
+    enabled: true
+    leaderboard: true
+    badges: true
+    points_system: true
+
+web_dashboard:
+  host: "0.0.0.0"
+  port: 5000
+  debug: true
+  secret_key: "your-secret-key-change-in-production"
+  
+  session:
+    timeout_minutes: 60
+    secure_cookies: false
+  
+  authentication:
+    enabled: false
+    ldap_server: ""
+    admin_users:
+      - "admin@company.local"
+      - "suhasdk18@gmail.com"
+
+apis:
+  virustotal:
+    enabled: false
+    api_key: ""
+    timeout: 30
+    max_requests_per_minute: 4
+  
+  abuseipdb:
+    enabled: false
+    api_key: ""
+    timeout: 30
+    confidence_threshold: 75
+
+monitoring:
+  metrics_enabled: true
+  prometheus:
+    enabled: false
+    port: 9090
+  
+  elasticsearch:
+    enabled: false
+    host: "localhost"
+    port: 9200
+    index_prefix: "phishing-detection"
+  
+  grafana:
+    enabled: false
+    host: "localhost"
+    port: 3000
+    admin_user: "admin"
+    admin_password: "admin"
+
+storage:
+  data_directory: "data"
+  logs_directory: "logs"
+  temp_directory: "temp"
+  max_log_size_mb: 100
+  log_rotation_days: 30
+
+security:
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 60
+  
+  input_validation:
+    max_email_size_mb: 25
+    max_attachment_count: 10
+    sanitize_html: true
+  
+  encryption:
+    encrypt_sensitive_data: false
+    encryption_key_path: "config/encryption.key"
+
+performance:
+  max_concurrent_emails: 10
+  database_pool_size: 20
+  cache_enabled: true
+  cache_ttl_seconds: 300
+
+features:
+  email_preview: true
+  bulk_operations: true
+  export_reports: true
+  api_access: true
+  webhook_notifications: false
+
+development:
+  mock_external_apis: true
+  test_mode: false
+  sample_data: true
+  debug_toolbar: true

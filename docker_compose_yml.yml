@@ -1,0 +1,175 @@
+version: '3.8'
+
+services:
+  phishing-detection:
+    build: .
+    container_name: phishing-detection-main
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config:/app/config
+      - ./templates:/app/templates
+      - ./static:/app/static
+    environment:
+      - PYTHONPATH=/app
+      - FLASK_ENV=development
+      - CONFIG_PATH=/app/config/config.yml
+    depends_on:
+      - mailhog
+      - redis
+    restart: unless-stopped
+    networks:
+      - phishing-net
+
+  web-dashboard:
+    build: .
+    container_name: phishing-web-dashboard
+    command: python app.py
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./data:/app/data
+      - ./templates:/app/templates
+      - ./static:/app/static
+      - ./config:/app/config
+    environment:
+      - PYTHONPATH=/app
+      - FLASK_ENV=development
+    depends_on:
+      - phishing-detection
+    restart: unless-stopped
+    networks:
+      - phishing-net
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: phishing-mailhog
+    ports:
+      - "1025:1025"   # SMTP server
+      - "8025:8025"   # Web UI
+    restart: unless-stopped
+    networks:
+      - phishing-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: phishing-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - phishing-net
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.14.0
+    container_name: phishing-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+    networks:
+      - phishing-net
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.14.0
+    container_name: phishing-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - xpack.security.enabled=false
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    networks:
+      - phishing-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: phishing-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    restart: unless-stopped
+    networks:
+      - phishing-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: phishing-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - phishing-net
+
+  nginx:
+    image: nginx:alpine
+    container_name: phishing-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - phishing-detection
+      - web-dashboard
+    restart: unless-stopped
+    networks:
+      - phishing-net
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: phishing-watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_POLL_INTERVAL=3600
+      - WATCHTOWER_CLEANUP=true
+    restart: unless-stopped
+
+volumes:
+  elasticsearch_data:
+    driver: local
+  grafana_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  phishing-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

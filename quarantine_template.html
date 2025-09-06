@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}Email Quarantine - {{ system_name }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="mb-0">
+            <i class="fas fa-ban text-warning me-2"></i>
+            Email Quarantine
+        </h1>
+        <p class="text-muted">Manage quarantined emails and review security threats</p>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-8">
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('quarantine_view') }}" 
+               class="btn {% if not current_filter %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                All Emails
+            </a>
+            <a href="{{ url_for('quarantine_view', status='quarantined') }}" 
+               class="btn {% if current_filter == 'quarantined' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+                Quarantined
+            </a>
+            <a href="{{ url_for('quarantine_view', status='released') }}" 
+               class="btn {% if current_filter == 'released' %}btn-success{% else %}btn-outline-success{% endif %}">
+                Released
+            </a>
+        </div>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="btn-group">
+            <button class="btn btn-outline-secondary" onclick="window.dashboard.refreshEmailList()">
+                <i class="fas fa-sync-alt me-1"></i>Refresh
+            </button>
+            <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#bulkActionsModal">
+                <i class="fas fa-tasks me-1"></i>Bulk Actions
+            </button>
+        </div>
+    </div>
+</div>
+
+{% if emails %}
+<div class="card shadow">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0">
+            <i class="fas fa-envelope me-2"></i>
+            Quarantined Emails ({{ emails|length }})
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="email-list">
+                <thead class="table-light">
+                    <tr>
+                        <th width="5%">
+                            <input type="checkbox" id="selectAll" class="form-check-input">
+                        </th>
+                        <th width="10%">Date</th>
+                        <th width="20%">Sender</th>
+                        <th width="15%">Recipient</th>
+                        <th width="25%">Subject</th>
+                        <th width="10%">Risk Level</th>
+                        <th width="8%">Status</th>
+                        <th width="7%">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for email in emails %}
+                    <tr id="email-{{ email.id }}">
+                        <td>
+                            <input type="checkbox" class="form-check-input email-checkbox" value="{{ email.id }}">
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ email.quarantine_date | datetime }}</small>
+                        </td>
+                        <td>
+                            <span class="text-truncate d-inline-block" style="max-width: 150px;" 
+                                  data-bs-toggle="tooltip" title="{{ email.sender }}">
+                                {{ email.sender }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="text-truncate d-inline-block" style="max-width: 120px;"
+                                  data-bs-toggle="tooltip" title="{{ email.recipient }}">
+                                {{ email.recipient }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="text-truncate d-inline-block" style="max-width: 200px;"
+                                  data-bs-toggle="tooltip" title="{{ email.subject }}">
+                                {{ email.subject }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="{{ email.risk_level | risk_badge_class }}">
+                                {{ email.risk_level }}
+                            </span>
+                            <div class="risk-score-bar mt-1">
+                                <div class="risk-score-fill risk-score-{% if email.combined_score >= 0.8 %}high{% elif email.combined_score >= 0.5 %}medium{% else %}low{% endif %}" 
+                                     style="width: {{ (email.combined_score * 100)|round }}%"></div>
+                            </div>
+                            <small class="text-muted">{{ (email.combined_score * 100)|round(1) }}%</small>
+                        </td>
+                        <td>
+                            <span class="badge {% if email.status == 'quarantined' %}bg-warning text-dark{% elif email.status == 'released' %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ email.status.title() }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('email_detail', email_id=email.id) }}" 
+                                   class="btn btn-outline-primary" data-bs-toggle="tooltip" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if email.status == 'quarantined' %}
+                                <button class="btn btn-outline-success btn-release-email" 
+                                        data-email-id="{{ email.id }}" data-bs-toggle="tooltip" title="Release">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                {% endif %}
+                                <button class="btn btn-outline-danger btn-delete-email" 
+                                        data-email-id="{{ email.id }}" data-bs-toggle="tooltip" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <small class="text-muted">
+                    Showing {{ emails|length }} emails
+                    {% if current_filter %} with status "{{ current_filter }}"{% endif %}
+                </small>
+            </div>
+            <div class="col-md-6 text-end">
+                <nav aria-label="Email pagination">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item disabled">
+                            <span class="page-link">Previous</span>
+                        </li>
+                        <li class="page-item active">
+                            <span class="page-link">1</span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">Next</span>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card shadow">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+        <h4 class="text-muted">No Quarantined Emails</h4>
+        <p class="text-muted">
+            {% if current_filter %}
+                No emails with status "{{ current_filter }}" found.
+            {% else %}
+                No emails have been quarantined yet.
+            {% endif %}
+        </p>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+            <i class="fas fa-arrow-left me-2"></i>
+            Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Bulk Actions Modal -->
+<div class="modal fade" id="bulkActionsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Bulk Actions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Select action to perform on selected emails:</p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success" onclick="bulkRelease()">
+                        <i class="fas fa-check me-2"></i>Release Selected
+                    </button>
+                    <button class="btn btn-danger" onclick="bulkDelete()">
+                        <i class="fas fa-trash me-2"></i>Delete Selected
+                    </button>
+                    <button class="btn btn-warning" onclick="bulkMarkFalsePositive()">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Mark as False Positive
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const emailCheckboxes = document.querySelectorAll('.email-checkbox');
+    
+    selectAllCheckbox?.addEventListener('change', function() {
+        emailCheckboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+    });
+    
+    emailCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const checkedCount = document.querySelectorAll('.email-checkbox:checked').length;
+            selectAllCheckbox.checked = checkedCount === emailCheckboxes.length;
+            selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < emailCheckboxes.length;
+        });
+    });
+});
+
+function getSelectedEmails() {
+    return Array.from(document.querySelectorAll('.email-checkbox:checked')).map(cb => cb.value);
+}
+
+function bulkRelease() {
+    const selectedEmails = getSelectedEmails();
+    if (selectedEmails.length === 0) {
+        alert('Please select emails to release');
+        return;
+    }
+    
+    if (confirm(`Release ${selectedEmails.length} selected email(s)?`)) {
+        selectedEmails.forEach(emailId => {
+            window.dashboard.releaseEmail(emailId);
+        });
+        bootstrap.Modal.getInstance(document.getElementById('bulkActionsModal')).hide();
+    }
+}
+
+function bulkDelete() {
+    const selectedEmails = getSelectedEmails();
+    if (selectedEmails.length === 0) {
+        alert('Please select emails to delete');
+        return;
+    }
+    
+    if (confirm(`Permanently delete ${selectedEmails.length} selected email(s)?`)) {
+        selectedEmails.forEach(emailId => {
+            window.dashboard.deleteEmail(emailId);
+        });
+        bootstrap.Modal.getInstance(document.getElementById('bulkActionsModal')).hide();
+    }
+}
+
+function bulkMarkFalsePositive() {
+    const selectedEmails = getSelectedEmails();
+    if (selectedEmails.length === 0) {
+        alert('Please select emails to mark as false positive');
+        return;
+    }
+    
+    alert('False positive marking functionality will be implemented in the next version');
+    bootstrap.Modal.getInstance(document.getElementById('bulkActionsModal')).hide();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - {{ system_name }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="mb-0">
+            <i class="fas fa-shield-alt text-primary me-2"></i>
+            Security Dashboard
+        </h1>
+        <p class="text-muted">Real-time phishing detection and email security monitoring</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card border-danger shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title text-danger mb-1">Quarantined Today</h5>
+                        <h2 class="mb-0">{{ stats.today_count }}</h2>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card border-warning shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title text-warning mb-1">High Risk Emails</h5>
+                        <h2 class="mb-0">{{ stats.high_risk_count }}</h2>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-fire fa-2x text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card border-info shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title text-info mb-1">Medium Risk</h5>
+                        <h2 class="mb-0">{{ stats.medium_risk_count }}</h2>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-chart-line fa-2x text-info"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card border-success shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title text-success mb-1">System Status</h5>
+                        <h3 class="mb-0 text-success">{{ stats.system_status }}</h3>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-check-circle fa-2x text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-clock me-2"></i>
+                    Recent Security Activity
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_activity %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Sender</th>
+                                    <th>Subject</th>
+                                    <th>Risk Level</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for activity in recent_activity %}
+                                <tr>
+                                    <td>
+                                        <small class="text-muted">{{ activity.date | datetime }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="text-truncate d-inline-block" style="max-width: 150px;">
+                                            {{ activity.sender }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="text-truncate d-inline-block" style="max-width: 200px;">
+                                            {{ activity.subject }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="{{ activity.risk_level | risk_badge_class }}">
+                                            {{ activity.risk_level }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if activity.status == 'quarantined' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                            {{ activity.status.title() }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('quarantine_view') }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No recent activity to display</p>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="card-footer text-center">
+                <a href="{{ url_for('quarantine_view') }}" class="btn btn-primary">
+                    <i class="fas fa-list me-2"></i>
+                    View All Quarantined Emails
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    Risk Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="riskChart" width="400" height="300"></canvas>
+            </div>
+        </div>
+        
+        <div class="card shadow">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    System Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 border-end">
+                        <h4 class="text-primary">{{ stats.total_quarantined }}</h4>
+                        <small class="text-muted">Total Quarantined</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-warning">{{ stats.average_risk_score }}%</h4>
+                        <small class="text-muted">Avg Risk Score</small>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('training_dashboard') }}" class="btn btn-outline-success">
+                        <i class="fas fa-graduation-cap me-2"></i>
+                        Security Training
+                    </a>
+                    <a href="{{ url_for('reports') }}" class="btn btn-outline-info">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Generate Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('riskChart').getContext('2d');
+    
+    const data = {
+        labels: ['High Risk', 'Medium Risk', 'Low Risk'],
+        datasets: [{
+            data: [{{ stats.high_risk_count }}, {{ stats.medium_risk_count }}, {{ stats.total_quarantined - stats.high_risk_count - stats.medium_risk_count }}],
+            backgroundColor: [
+                '#dc3545',
+                '#ffc107', 
+                '#17a2b8'
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    };
+    
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+    
+    setInterval(function() {
+        fetch('/api/stats')
+            .then(response => response.json())
+            .then(data => {
+                document.querySelector('.card-danger h2').textContent = data.today_count || 0;
+                document.querySelector('.card-warning h2').textContent = data.high_risk_count || 0;
+                document.querySelector('.card-info h2').textContent = data.medium_risk_count || 0;
+            })
+            .catch(console.error);
+    }, 30000);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+
+{% block title %}Security Training - {{ system_name }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="mb-0">
+            <i class="fas fa-graduation-cap text-success me-2"></i>
+            Security Awareness Training
+        </h1>
+        <p class="text-muted">Enhance your cybersecurity knowledge and phishing detection skills</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100 shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-question-circle me-2"></i>
+                    Phishing Awareness Quiz
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Test your knowledge about phishing detection and cybersecurity best practices.</p>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-check text-success me-2"></i>5 interactive questions</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Immediate feedback</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Performance tracking</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Certification upon completion</li>
+                </ul>
+                <div class="d-grid">
+                    <a href="{{ url_for('quiz') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-play me-2"></i>Start Quiz
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100 shadow">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Your Performance
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">View your training progress and performance metrics.</p>
+                <div class="mb-3">
+                    <label for="userEmail" class="form-label">Enter your email address:</label>
+                    <input type="email" class="form-control" id="userEmail" 
+                           placeholder="your-email@company.com">
+                </div>
+                <div class="d-grid">
+                    <button class="btn btn-info btn-lg btn-load-user-stats" onclick="loadUserStats()">
+                        <i class="fas fa-chart-bar me-2"></i>View My Stats
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-book me-2"></i>
+                    Training Modules
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-4 mb-3">
+                        <div class="card border-primary h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="fas fa-eye text-primary me-2"></i>
+                                    Module 1: Recognizing Phishing
+                                </h6>
+                                <p class="card-text small">Learn to identify common phishing indicators and suspicious email patterns.</p>
+                                <div class="progress mb-2" style="height: 5px;">
+                                    <div class="progress-bar bg-primary" style="width: 100%"></div>
+                                </div>
+                                <small class="text-success">
+                                    <i class="fas fa-check-circle me-1"></i>Completed
+                                </small>
+                            </div>
+                            <div class="card-footer">
+                                <button class="btn btn-outline-primary btn-sm w-100">
+                                    <i class="fas fa-redo me-1"></i>Review
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4 mb-3">
+                        <div class="card border-warning h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="fas fa-shield-alt text-warning me-2"></i>
+                                    Module 2: Safe Email Practices
+                                </h6>
+                                <p class="card-text small">Best practices for handling emails, attachments, and links securely.</p>
+                                <div class="progress mb-2" style="height: 5px;">
+                                    <div class="progress-bar bg-warning" style="width: 60%"></div>
+                                </div>
+                                <small class="text-warning">
+                                    <i class="fas fa-clock me-1"></i>In Progress (60%)
+                                </small>
+                            </div>
+                            <div class="card-footer">
+                                <button class="btn btn-warning btn-sm w-100">
+                                    <i class="fas fa-play me-1"></i>Continue
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4 mb-3">
+                        <div class="card border-secondary h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="fas fa-exclamation-triangle text-secondary me-2"></i>
+                                    Module 3: Incident Reporting
+                                </h6>
+                                <p class="card-text small">How to report suspicious emails and security incidents properly.</p>
+                                <div class="progress mb-2" style="height: 5px;">
+                                    <div class="progress-bar bg-secondary" style="width: 0%"></div>
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-lock me-1"></i>Not Started
+                                </small>
+                            </div>
+                            <div class="card-footer">
+                                <button class="btn btn-outline-secondary btn-sm w-100" disabled>
+                                    <i class="fas fa-lock me-1"></i>Locked
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    Security Tips & Best Practices
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-envelope text-primary me-2"></i>Email Security</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="fas fa-check text-success me-2"></i>Always verify sender addresses</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Be suspicious of urgent requests</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Hover over links before clicking</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Don't open suspicious attachments</li>
+                        </ul>
+                        
+                        <h6 class="mt-3"><i class="fas fa-user-shield text-warning me-2"></i>Personal Security</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="fas fa-check text-success me-2"></i>Use strong, unique passwords</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Enable two-factor authentication</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Keep software updated</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Report suspicious activities</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-exclamation-triangle text-danger me-2"></i>Red Flags</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="fas fa-times text-danger me-2"></i>Requests for personal information</li>
+                            <li><i class="fas fa-times text-danger me-2"></i>Threatening or urgent language</li>
+                            <li><i class="fas fa-times text-danger me-2"></i>Suspicious sender addresses</li>
+                            <li><i class="fas fa-times text-danger me-2"></i>Unexpected file attachments</li>
+                        </ul>
+                        
+                        <h6 class="mt-3"><i class="fas fa-phone text-info me-2"></i>When in Doubt</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="fas fa-check text-success me-2"></i>Contact IT Security team</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Verify requests through alternate channels</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Use the "Report Phishing" button</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Don't feel pressured to act quickly</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-trophy me-2"></i>
+                    Leaderboard
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between align-items-center border-0">
+                        <div>
+                            <i class="fas fa-medal text-warning me-2"></i>
+                            <strong>john.doe@company.com</strong>
+                            <br><small class="text-muted">Security Champion</small>
+                        </div>
+                        <span class="badge bg-warning rounded-pill">95%</span>
+                    </div>
+                    
+                    <div class="list-group-item d-flex justify-content-between align-items-center border-0">
+                        <div>
+                            <i class="fas fa-medal text-secondary me-2"></i>
+                            <strong>jane.smith@company.com</strong>
+                            <br><small class="text-muted">Security Expert</small>
+                        </div>
+                        <span class="badge bg-secondary rounded-pill">92%</span>
+                    </div>
+                    
+                    <div class="list-group-item d-flex justify-content-between align-items-center border-0">
+                        <div>
+                            <i class="fas fa-medal text-info me-2"></i>
+                            <strong>mike.wilson@company.com</strong>
+                            <br><small class="text-muted">Security Specialist</small>
+                        </div>
+                        <span class="badge bg-info rounded-pill">88%</span>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="text-center">
+                    <small class="text-muted">Complete the quiz to join the leaderboard!</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card shadow mt-3">
+            <div class="card-header bg-success text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-certificate me-2"></i>
+                    Achievements
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <i class="fas fa-star fa-2x text-warning mb-2"></i>
+                        <br><small>First Quiz</small>
+                    </div>
+                    <div class="col-4">
+                        <i class="fas fa-fire fa-2x text-danger mb-2"></i>
+                        <br><small>5 Day Streak</small>
+                    </div>
+                    <div class="col-4">
+                        <i class="fas fa-crown fa-2x text-warning mb-2"></i>
+                        <br><small>Perfect Score</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User Statistics Modal -->
+<div class="modal fade" id="statsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Training Statistics
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="statsContent">
+                <div class="text-center">
+                    <div class="loading-spinner"></div>
+                    <p class="mt-3">Loading statistics...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function loadUserStats() {
+    window.dashboard.loadUserStats();
+}
+</script>
+{% endblock %}
