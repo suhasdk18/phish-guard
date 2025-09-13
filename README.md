@@ -290,14 +290,7 @@ If you encounter any issues or have questions:
 
 1. Check the [Issues](https://github.com/suhasdk18/phishing-detection-system/issues) page
 2. Review the documentation in the `docs/` directory
-3. Contact the maintainer at suhasdk18@gmail.com
-
-## 🔄 Version History
-
-- **v1.0.0** - Initial release with basic detection and quarantine
-- **v1.1.0** - Added user training system and web dashboard
-- **v1.2.0** - Integrated ELK stack and Grafana monitoring
-- **v1.3.0** - Enhanced ML models and attachment analysis
+3. Contact the maintainer at suhasdk18@gmail.co
 
 ---
 
